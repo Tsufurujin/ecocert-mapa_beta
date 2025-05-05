@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mapa EcoCert</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style> #map { height: 600px; } </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var urlParams = new URLSearchParams(window.location.search);
+        var lat = parseFloat(urlParams.get('lat')) || -15.7801;
+        var lon = parseFloat(urlParams.get('lon')) || -47.9292;
+        var map = L.map('map').setView([lat, lon], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+        }).addTo(map);
+        L.marker([lat, lon]).addTo(map).bindPopup("Localização da carga").openPopup();
+    </script>
+</body>
+</html>
