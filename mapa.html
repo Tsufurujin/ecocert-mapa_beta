@@ -11,49 +11,48 @@
 <body>
     <div id="map"></div>
     <script>
-        // Inicializa o mapa (centro em São Paulo, ajustável)
+        // Inicializa o mapa (centro no Brasil)
         var map = L.map('map').setView([-23.5505, -46.6333], 6);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // Dados da planilha (substitua pela URL da API ou JSON)
-        var cargas = [
-            { id: "123", nome: "Madeira A", lat: -23.5505, lng: -46.6333, status: "Aprovado" },
-            { id: "456", nome: "Madeira B", lat: -23.5505, lng: -46.6333, status: "Pendente" },
-            { id: "400", nome: "Madeira J", lat: -24.2633, lng: -49.7193, status: "Aprovado" }
-        ];
+        // Carrega dados da planilha via SheetBest
+        fetch('https://api.sheetbest.com/sheets/f378914e-cb62-4324-866e-bb4ca9efb0b5')
+            .then(response => response.json())
+            .then(cargas => {
+                // Adiciona marcadores para cada carga
+                cargas.forEach(function(carga) {
+                    var marker = L.marker([carga.latitude, carga.longitude]).addTo(map);
+                    marker.bindPopup(`ID: ${carga.id}<br>Nome: ${carga.nome}<br>Status: ${carga.status}`);
+                });
 
-        // Adiciona marcadores para cada carga
-        cargas.forEach(function(carga) {
-            var marker = L.marker([carga.lat, carga.lng]).addTo(map);
-            marker.bindPopup(`ID: ${carga.id}<br>Nome: ${carga.nome}<br>Status: ${carga.status}`);
-        });
+                // Evento de clique no mapa
+                map.on('click', function(e) {
+                    var lat = e.latlng.lat;
+                    var lng = e.latlng.lng;
+                    // Encontra cargas próximas (tolerância de 0.01 graus)
+                    var cargasProximas = cargas.filter(function(carga) {
+                        return Math.abs(carga.latitude - lat) < 0.01 && Math.abs(carga.longitude - lng) < 0.01;
+                    });
+                    // Envia IDs das cargas próximas ao app
+                    var ids = cargasProximas.map(c => c.id);
+                    window.AppInventor.setWebViewString(JSON.stringify(ids));
+                });
 
-        // Evento de clique no mapa
-        map.on('click', function(e) {
-            var lat = e.latlng.lat;
-            var lng = e.latlng.lng;
-            // Encontra cargas próximas (ex.: dentro de 0.01 graus)
-            var cargasProximas = cargas.filter(function(carga) {
-                return Math.abs(carga.lat - lat) < 0.01 && Math.abs(carga.lng - lng) < 0.01;
-            });
-            // Envia os IDs das cargas próximas ao app
-            var ids = cargasProximas.map(c => c.id);
-            window.AppInventor.setWebViewString(JSON.stringify(ids));
-        });
-
-        // Função para centralizar o mapa em uma carga específica
-        function centralizarCarga(id) {
-            var carga = cargas.find(c => c.id === id);
-            if (carga) {
-                map.setView([carga.lat, carga.lng], 12);
-                L.marker([carga.lat, carga.lng])
-                    .addTo(map)
-                    .bindPopup(`ID: ${carga.id}<br>Nome: ${carga.nome}<br>Status: ${carga.status}`)
-                    .openPopup();
-            }
-        }
+                // Função para centralizar o mapa em uma carga específica
+                window.centralizarCarga = function(id) {
+                    var carga = cargas.find(c => c.id == id);
+                    if (carga) {
+                        map.setView([carga.latitude, carga.longitude], 12);
+                        L.marker([carga.latitude, carga.longitude])
+                            .addTo(map)
+                            .bindPopup(`ID: ${carga.id}<br>Nome: ${carga.nome}<br>Status: ${carga.status}`)
+                            .openPopup();
+                    }
+                };
+            })
+            .catch(error => console.error('Erro ao carregar dados:', error));
 
         // Recebe comandos do app (ex.: centralizar em um ID)
         window.addEventListener('message', function(event) {
