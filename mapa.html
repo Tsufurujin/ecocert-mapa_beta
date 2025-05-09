@@ -17,25 +17,27 @@
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
+        // Armazena os marcadores para remoção
+        var marcadores = [];
+
         // Carrega dados da planilha via SheetBest
         fetch('https://api.sheetbest.com/sheets/f378914e-cb62-4324-866e-bb4ca9efb0b5')
             .then(response => response.json())
             .then(cargas => {
-                // Adiciona marcadores para cada carga
+                // Adiciona marcadores iniciais para cada carga
                 cargas.forEach(function(carga) {
                     var marker = L.marker([carga.latitude, carga.longitude]).addTo(map);
                     marker.bindPopup(`ID: ${carga.id}<br>Nome: ${carga.nome}<br>Status: ${carga.status}`);
+                    marcadores.push(marker);
                 });
 
                 // Evento de clique no mapa
                 map.on('click', function(e) {
                     var lat = e.latlng.lat;
                     var lng = e.latlng.lng;
-                    // Encontra cargas próximas (tolerância de 0.01 graus)
                     var cargasProximas = cargas.filter(function(carga) {
                         return Math.abs(carga.latitude - lat) < 0.01 && Math.abs(carga.longitude - lng) < 0.01;
                     });
-                    // Envia IDs das cargas próximas ao app
                     var ids = cargasProximas.map(c => c.id);
                     window.AppInventor.setWebViewString(JSON.stringify(ids));
                 });
@@ -45,21 +47,30 @@
                     var carga = cargas.find(c => c.id == id);
                     if (carga) {
                         map.setView([carga.latitude, carga.longitude], 12);
-                        L.marker([carga.latitude, carga.longitude])
+                        var marker = L.marker([carga.latitude, carga.longitude])
                             .addTo(map)
                             .bindPopup(`ID: ${carga.id}<br>Nome: ${carga.nome}<br>Status: ${carga.status}`)
                             .openPopup();
+                        marcadores.push(marker);
                     }
+                };
+
+                // Função para resetar o mapa ao estado inicial
+                window.resetarMapa = function() {
+                    // Remove todos os marcadores adicionados
+                    marcadores.forEach(marker => map.removeLayer(marker));
+                    marcadores = [];
+                    // Recarrega os marcadores iniciais
+                    cargas.forEach(function(carga) {
+                        var marker = L.marker([carga.latitude, carga.longitude]).addTo(map);
+                        marker.bindPopup(`ID: ${carga.id}<br>Nome: ${carga.nome}<br>Status: ${carga.status}`);
+                        marcadores.push(marker);
+                    });
+                    // Reseta a visão do mapa
+                    map.setView([-23.5505, -46.6333], 6);
                 };
             })
             .catch(error => console.error('Erro ao carregar dados:', error));
-
-        // Recebe comandos do app (ex.: centralizar em um ID)
-        window.addEventListener('message', function(event) {
-            if (event.data && event.data.id) {
-                centralizarCarga(event.data.id);
-            }
-        });
     </script>
 </body>
 </html>
